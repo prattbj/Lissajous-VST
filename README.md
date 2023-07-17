@@ -14,3 +14,6 @@ after the sliders on the side as opposed to before.
 The blue diamond represents where a sample would be if either the left or the right exceeds 0db. 
 If any part of the left or right exceeds this, it gets cut off by the visual, but not necessarily clipped
 unless you pull down the clip slider for that.
+
+
+Here is a simple demonstration of the current build of the plugin: https://youtu.be/o_GDnC3Xpjk
