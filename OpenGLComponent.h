@@ -33,7 +33,7 @@ private:
     LissajousVSTAudioProcessor* audioProcessor;
     GLuint ibo, vbo;
     juce::OpenGLContext openGLContext;
-    
+    int readPos;
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (OpenGLComponent)
 
      

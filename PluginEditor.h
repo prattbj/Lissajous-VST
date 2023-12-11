@@ -25,7 +25,7 @@ public:
     //==============================================================================
     void paint (juce::Graphics&) override;
     void resized() override;
-
+    
     //void sliderValueChanged(juce::Slider* slider) override;
 
 private:
@@ -38,13 +38,19 @@ private:
     juce::Slider postPanSlider;
     std::unique_ptr<SliderAttachment> prePanAttachment;
     std::unique_ptr<SliderAttachment> postPanAttachment;
-    //juce::Label panLabel;
+
+    
+
+    juce::Slider rotaterSlider;
+    std::unique_ptr<SliderAttachment> rotateAttachment;
+    juce::Slider postRotaterSlider;
+    std::unique_ptr<SliderAttachment> postRotateAttachment;
 
     juce::Slider preWidthSlider;
     juce::Slider postWidthSlider;
     std::unique_ptr<SliderAttachment> preWidthAttachment;
     std::unique_ptr<SliderAttachment> postWidthAttachment;
-    //juce::Label widthLabel;
+    
     juce::Slider preMidSlider;
     juce::Slider postMidSlider;
     std::unique_ptr<SliderAttachment> preMidAttachment;
@@ -52,9 +58,45 @@ private:
 
     juce::Slider lClipSlider;
     std::unique_ptr<SliderAttachment> lClipAttachment;
-
+    
     juce::Slider rClipSlider;
     std::unique_ptr<SliderAttachment> rClipAttachment;
+    
+
+    juce::Slider lRevClipSlider;
+    std::unique_ptr<SliderAttachment> lRevClipAttachment;
+
+    juce::Slider rRevClipSlider;
+    std::unique_ptr<SliderAttachment> rRevClipAttachment;
+
     OpenGLComponent openGLComponent;
+    juce::Slider lMoveSlider;
+    std::unique_ptr<SliderAttachment> lMoveAttachment;
+
+    juce::Slider rMoveSlider;
+    std::unique_ptr<SliderAttachment> rMoveAttachment;
+
+    juce::Slider lDistortSlider;
+    std::unique_ptr<SliderAttachment> lDistortAttachment;
+
+    juce::Slider rDistortSlider;
+    std::unique_ptr<SliderAttachment> rDistortAttachment;
+
+    juce::Label prePanLabel;
+    juce::Label postPanLabel;
+    juce::Label preMidLabel;
+    juce::Label postMidLabel;
+    juce::Label preWidthLabel;
+    juce::Label postWidthLabel;
+    juce::Label lClipLabel;
+    juce::Label rClipLabel;
+    juce::Label lDistortLabel;
+    juce::Label rDistortLabel;
+    juce::Label lTranslateLabel;
+    juce::Label rTranslateLabel;
+    juce::Label lReverseClipLabel;
+    juce::Label rReverseClipLabel;
+
+
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (LissajousVSTAudioProcessorEditor)
 };

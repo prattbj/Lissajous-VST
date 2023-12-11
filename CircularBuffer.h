@@ -13,13 +13,14 @@ template <class T>
 class CircularBuffer
 {
 public:
-	CircularBuffer(int size)
+	//constructor
+	CircularBuffer(int size) : bufferSize(size)
 	{
-		bufferSize = size;
-		audioBuffer = new AudioBuffer<T>(2, bufferSize);
+		audioBuffer = std::make_unique<AudioBuffer<T>>(2, bufferSize);
 		writePosition = 0;
 	}
 
+	//Adds samples to the circular buffer
 	void pushSamples(AudioBuffer<T>& newData)
 	{
 		for (int i = 0; i < 2; i++)
@@ -42,14 +43,17 @@ public:
 		writePosition = writePosition.get() % bufferSize;
 	}
 
+	//Returns a copy of the audio buffer (we don't want to send pointers because that can cause memory leaks)
 	AudioBuffer<T> getSamples()
 	{
-		return *audioBuffer;
+		AudioBuffer<T> returnBuffer = AudioBuffer<T>(*audioBuffer);
+		
+		return returnBuffer;
 	}
 private:
 	int bufferSize;
 	 
-	AudioBuffer<T> *audioBuffer;
+	std::unique_ptr<AudioBuffer<T>> audioBuffer;
 	Atomic<int> writePosition;
 
 	JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(CircularBuffer)

@@ -27,6 +27,7 @@ OpenGLComponent::OpenGLComponent(LissajousVSTAudioProcessor* audioProcessor)
     openGLContext.attachTo(*this);
     ibo = GLuint();
     vbo = GLuint();
+    readPos = 0;
 }
 
 OpenGLComponent::~OpenGLComponent()
@@ -81,11 +82,14 @@ void OpenGLComponent::renderOpenGL()
     glBegin(GL_LINE_STRIP);
     int numChannels = buffer.getNumChannels();
     int numSamples = buffer.getNumSamples();
+    if (readPos >= numSamples)
+        readPos = 0;
 
-    float* channelX = buffer.getWritePointer(0);
-    float* channelY = buffer.getWritePointer(1);
+    //We make x the 1st channel so that l and r are represented by the upper quadrants (top left is left, top right is right)
+    float* channelX = buffer.getWritePointer(1);
+    float* channelY = buffer.getWritePointer(0);
     // Draw the audio data
-    for (int sample = 0; sample < numSamples; ++sample)
+    for (int sample = readPos; sample < numSamples; ++sample)
     {
         
         float audioX = channelX[sample];
@@ -101,6 +105,25 @@ void OpenGLComponent::renderOpenGL()
         glVertex2f(xPos, yPos);
         
     }
+
+    for (int sample = 0; sample < readPos; ++sample)
+    {
+
+        float audioX = channelX[sample];
+        float audioY = channelY[sample];
+        // Multiply by .7071 = sin(45 deg) to scale since we rotate
+        // Rotating cuts off the drawing if the x and y values are 
+        // too high, so scaling down a little bit makes it so that 
+        // the audio is only cut off if the values are greater than 1/-1
+        // (at the same time)
+        float xPos = audioX * width * 0.5f * 0.7071 + width * 0.5f;
+        float yPos = audioY * height * 0.5f * 0.7071 + height * 0.5f;
+
+        glVertex2f(xPos, yPos);
+
+    }
+    
+    readPos += audioProcessor->getNumSamples();
     glEnd();
 
     glDisable(GL_BLEND);
@@ -116,7 +139,7 @@ void OpenGLComponent::renderOpenGL()
     float centerX = width * 0.5f;
     float centerY = height * 0.5f;
     glColor3f(0.0f, 0.0f, 0.0f);
-
+    
     glBegin(GL_TRIANGLES);
     //Draw 4 triangles to fill in the outside of the OpenGL context. That way,
     //audio signal doesn't escape the blue diamond
@@ -136,7 +159,7 @@ void OpenGLComponent::renderOpenGL()
     glVertex2f(centerX - scaledWidth * 0.5f, centerY - scaledHeight * 0.5f);
     glVertex2f(centerX - scaledWidth * 2.0f, 0);
     glEnd();
-
+    
 
     glColor3f(0.0f, 0.0f, 1.0f);
 

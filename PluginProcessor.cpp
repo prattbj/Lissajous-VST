@@ -21,7 +21,15 @@ LissajousVSTAudioProcessor::LissajousVSTAudioProcessor() :
             std::make_unique<juce::AudioParameterFloat>("preMidSlider", "preMid", 0.0f, 2.0f, 1.0f),
             std::make_unique<juce::AudioParameterFloat>("postMidSlider", "postMid", 0.0f, 2.0f, 1.0f),
             std::make_unique<juce::AudioParameterFloat>("lClipSlider", "lClip", 0.0f, 1.0f, 1.0f),
-            std::make_unique<juce::AudioParameterFloat>("rClipSlider", "rClip", 0.0f, 1.0f, 1.0f)
+            std::make_unique<juce::AudioParameterFloat>("rClipSlider", "rClip", 0.0f, 1.0f, 1.0f),
+            std::make_unique<juce::AudioParameterFloat>("lRevClipSlider", "lRevClip", 0.0f, 1.0f, 0.0f),
+            std::make_unique<juce::AudioParameterFloat>("rRevClipSlider", "rRevClip", 0.0f, 1.0f, 0.0f),
+            std::make_unique<juce::AudioParameterFloat>("lDistortSlider", "lDistort", 0.0f, 1.0f, 0.0f),
+            std::make_unique<juce::AudioParameterFloat>("rDistortSlider", "rDistort", 0.0f, 1.0f, 0.0f),
+            std::make_unique<juce::AudioParameterFloat>("rotaterSlider", "rotate", -3.14f, 3.14f, 0.0f),
+            std::make_unique<juce::AudioParameterFloat>("postRotaterSlider", "postRotate", -3.14f, 3.14f, 0.0f),
+            std::make_unique<juce::AudioParameterFloat>("lMoveSlider", "translateL", -1.0f, 1.0f, 0.0f),
+            std::make_unique<juce::AudioParameterFloat>("rMoveSlider", "translateR", -1.0f, 1.0f, 0.0f)
         }                                                                                   
         ),
     numSamples(256),
@@ -36,7 +44,7 @@ LissajousVSTAudioProcessor::LissajousVSTAudioProcessor() :
                        ) 
 #endif
 {
-    buffer = new CircularBuffer<float>(numSamples);
+    buffer = std::make_unique<CircularBuffer<float>>(numSamples);
     
     //panAmount.set(*parameters.getRawParameterValue("panSlider"));
 }
@@ -112,8 +120,25 @@ void LissajousVSTAudioProcessor::prepareToPlay (double sampleRate, int samplesPe
 {
     // Use this method as the place to do any pre-playback
     // initialisation that you need..
-    buffer = new CircularBuffer<float>(samplesPerBlock * 2);
+    buffer = std::make_unique<CircularBuffer<float>>(samplesPerBlock * 2);
     numSamples = samplesPerBlock;
+
+    prePan.reset(sampleRate, 0.05);
+    postPan.reset(sampleRate, 0.05);
+    preWidth.reset(sampleRate, 0.05);
+    postWidth.reset(sampleRate, 0.05);
+    preMid.reset(sampleRate, 0.05);
+    postMid.reset(sampleRate, 0.05);
+    lClip.reset(sampleRate, 0.05);
+    rClip.reset(sampleRate, 0.05);
+    lRevClip.reset(sampleRate, 0.05);
+    rRevClip.reset(sampleRate, 0.05);
+    lDistort.reset(sampleRate, 0.05);
+    rDistort.reset(sampleRate, 0.05);
+    rotate.reset(sampleRate, 0.05);
+    postRotate.reset(sampleRate, 0.05);
+    translateL.reset(sampleRate, 0.05);
+    translateR.reset(sampleRate, 0.05);
 }
 
 void LissajousVSTAudioProcessor::releaseResources()
@@ -169,22 +194,59 @@ void LissajousVSTAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer,
     // the samples and the outer loop is handling the channels.
     // Alternatively, you can process the samples with the channels
     // interleaved by keeping the same state.
+
+    prePan.setTargetValue(*parameters.getRawParameterValue("prePanSlider"));
+    postPan.setTargetValue(*parameters.getRawParameterValue("postPanSlider"));
+    preWidth.setTargetValue(*parameters.getRawParameterValue("preWidthSlider"));
+    postWidth.setTargetValue(*parameters.getRawParameterValue("postWidthSlider"));
+    preMid.setTargetValue(*parameters.getRawParameterValue("preMidSlider"));
+    postMid.setTargetValue(*parameters.getRawParameterValue("postMidSlider"));
+    lClip.setTargetValue(*parameters.getRawParameterValue("lClipSlider"));
+    rClip.setTargetValue(*parameters.getRawParameterValue("rClipSlider"));
+    lRevClip.setTargetValue(*parameters.getRawParameterValue("lRevClipSlider"));
+    rRevClip.setTargetValue(*parameters.getRawParameterValue("rRevClipSlider"));
+    lDistort.setTargetValue(*parameters.getRawParameterValue("lDistortSlider"));
+    rDistort.setTargetValue(*parameters.getRawParameterValue("rDistortSlider"));
+    rotate.setTargetValue(*parameters.getRawParameterValue("rotaterSlider"));
+    translateL.setTargetValue(*parameters.getRawParameterValue("lMoveSlider"));
+    translateR.setTargetValue(*parameters.getRawParameterValue("rMoveSlider"));
+    postRotate.setTargetValue(*parameters.getRawParameterValue("postRotaterSlider"));
+
     
     auto* lChannelData = buffer.getWritePointer(0);
     auto* rChannelData = buffer.getWritePointer(1);
     int numSamples = buffer.getNumSamples();
-    Processing::pan(0, lChannelData, buffer.getNumSamples(), *parameters.getRawParameterValue("prePanSlider"));
-    Processing::pan(1, rChannelData, buffer.getNumSamples(), *parameters.getRawParameterValue("prePanSlider"));
-    Processing::widen(lChannelData, rChannelData, numSamples, *parameters.getRawParameterValue("preWidthSlider"));
-    Processing::midBoost(lChannelData, rChannelData, numSamples, *parameters.getRawParameterValue("preMidSlider"));
 
-    Processing::clip(lChannelData, numSamples, *parameters.getRawParameterValue("lClipSlider"));
-    Processing::clip(rChannelData, numSamples, *parameters.getRawParameterValue("rClipSlider"));
+    for (int sample = 0; sample < numSamples; ++sample)
+    {
+        //Pre
+        Processing::pan(0, lChannelData, sample, prePan.getNextValue());
+        Processing::pan(1, rChannelData, sample, prePan.getCurrentValue());
+        Processing::rotate(lChannelData, rChannelData, sample, rotate.getNextValue());
+        Processing::widen(lChannelData, rChannelData, sample, preWidth.getNextValue());
+        Processing::midBoost(lChannelData, rChannelData, sample, preMid.getNextValue());
 
-    Processing::pan(0, lChannelData, buffer.getNumSamples(), *parameters.getRawParameterValue("postPanSlider"));
-    Processing::pan(1, rChannelData, buffer.getNumSamples(), *parameters.getRawParameterValue("postPanSlider"));
-    Processing::widen(lChannelData, rChannelData, numSamples, *parameters.getRawParameterValue("postWidthSlider"));
-    Processing::midBoost(lChannelData, rChannelData, numSamples, *parameters.getRawParameterValue("postMidSlider"));
+        Processing::translate(lChannelData, sample, translateL.getNextValue());
+        Processing::translate(rChannelData, sample, translateR.getNextValue());
+
+        Processing::distort(lChannelData, sample, lDistort.getNextValue());
+        Processing::distort(rChannelData, sample, rDistort.getNextValue());
+        
+        Processing::revClip(lChannelData, sample, lRevClip.getNextValue());
+        Processing::revClip(rChannelData, sample, rRevClip.getNextValue());
+
+        Processing::clip(lChannelData, sample, lClip.getNextValue());
+        Processing::clip(rChannelData, sample, rClip.getNextValue());
+
+        Processing::pan(0, lChannelData, sample, postPan.getNextValue());
+        Processing::pan(1, rChannelData, sample, postPan.getCurrentValue());
+        Processing::rotate(lChannelData, rChannelData, sample, postRotate.getNextValue());
+        Processing::widen(lChannelData, rChannelData, sample, postWidth.getNextValue());
+        Processing::midBoost(lChannelData, rChannelData, sample, postMid.getNextValue());
+
+    }
+    
+    
 
     this->buffer->pushSamples(buffer);
 }
